@@ -10,6 +10,7 @@ create table person ( id integer primary key not null,
 -- since most composers have more than one composition to their name. Year in
 -- this table refers to the field 'Composition Year' in the text file.
 create table score ( id integer primary key not null,
+					 title varchar,
                      genre varchar,
                      key varchar,
                      incipit varchar,
