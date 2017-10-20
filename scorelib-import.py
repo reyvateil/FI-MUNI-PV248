@@ -48,21 +48,24 @@ class Person( DBItem ):
         self.cursor.execute( "insert into person (born, died, name) values (?, ?, ?)", (self.born, self.died, self.name) )
 
 class Score (DBItem):
-    def __init__(self, conn, genre, key, incipit, year):
+    def __init__(self, conn, title, genre, key, incipit, year):
         super().__init__(conn)
+        self.title = title
         self.genre = genre
         self.key = key
         self.incipit = incipit
         self.year = year
 
     def fetch_id( self ):
-        self.cursor.execute( "select id from score where genre = ? and key = ? and incipit = ? and year = ?", (self.genre, self.key, self.incipit, self.year) )
+        self.cursor.execute( "select id from score where title is ? and genre is ? and key is ? and incipit is ? and year is ?", (self.title, self.genre, self.key, self.incipit, self.year) )
         res = self.cursor.fetchone()
+        print("Found: {}".format(res))
         if res is not None:
             self.id = res[0]
 
     def do_store( self ):
-        self.cursor.execute( "insert into score (genre, key, incipit, year) values (?, ?, ?, ?)", (self.genre, self.key, self.incipit, self.year) )
+        print("storing")
+        self.cursor.execute( "insert into score (title, genre, key, incipit, year) values (?, ?, ?, ?, ?)", (self.title, self.genre, self.key, self.incipit, self.year) )
 
 class Edition(DBItem):
     def __init__(self, conn, score_id, edit_name, year):
@@ -72,7 +75,7 @@ class Edition(DBItem):
         self.year = year
 
     def fetch_id(self):
-        self.cursor.execute("select id from edition where score = ? and name = ? and year = ?",
+        self.cursor.execute("select id from edition where score = ? and name is ? and year is ?",
                             (self.score_id, self.edit_name, self.year))
         res = self.cursor.fetchone()
         if res is not None:
@@ -151,44 +154,44 @@ conn = sqlite3.connect("scorelib.sqlite")
 cur = conn.cursor()
 
 def make_db_entries(conn, entry):
-    pprint(entry)
+    #pprint(entry)
 
     composers = [Person(conn, composer) for composer in entry['composer'] if composer]
     for composer in composers:
         composer.store()
-        print("Composer: '{}'({})".format(composer.name, composer.id))
+        #print("Composer: '{}'({})".format(composer.name, composer.id))
 
     editors = [Person(conn, editor) for editor in entry['editor'] if editor]
     for editor in editors:
         editor.store()
-        print("Editor: '{}'({})".format(editor.name, editor.id))
+        #print("Editor: '{}'({})".format(editor.name, editor.id))
 
-    score = Score(conn, entry['genre'][0], entry['key'][0], entry['incipit'][0], entry['composition year'][0])
+    score = Score(conn, entry['title'][0], entry['genre'][0], entry['key'][0], entry['incipit'][0], entry['composition year'][0])
     score.store()
-    print("Score({}): genre:'{}', key='{}', incipit='{}', composition year='{}'".format(score.id, score.genre, score.key, score.incipit, score.year))
+    print("Score({}): title:'{}' genre:'{}', key='{}', incipit='{}', composition year='{}'".format(score.id, score.title, score.genre, score.key, score.incipit, score.year))
 
     for composer in composers:
         score_author = Score_author(conn, composer.id, score.id)
         score_author.store()
-        print("Score author: '{}'({}) Score: {}".format(composer.name, composer.id, score.id))
+        #print("Score author: '{}'({}) Score: {}".format(composer.name, composer.id, score.id))
 
     voices = [Voice(conn, voice_num, score.id, voice_name) for voice_num, voice_name in entry['voice']]
     for voice in voices:
         voice.store()
-        print("Voice {}: '{}' ({})".format(voice.voice_num, voice.voice_name, voice.id))
+        #print("Voice {}: '{}' ({})".format(voice.voice_num, voice.voice_name, voice.id))
 
     edition = Edition(conn, score.id, entry['edition'][0], entry['publication year'][0])
     edition.store()
-    print("Edition({}): '{}' {}".format(edition.id, edition.edit_name, edition.year))
+    #print("Edition({}): '{}' {}".format(edition.id, edition.edit_name, edition.year))
 
     for editor in editors:
         edition_author = Edition_author(conn, edition.id, editor.id)
         edition_author.store()
-        print("Edition author: edition ID: {} editor: '{}' ({})".format(edition.id, editor.name, editor.id))
+        #print("Edition author: edition ID: {} editor: '{}' ({})".format(edition.id, editor.name, editor.id))
 
     print_edition = Print(conn, entry['print number'][0], entry['partiture'], edition.id)
     print_edition.store()
-    print("Print edition: print number: {}, partiture: '{}', edition ID: {}".format(print_edition.id, print_edition.partiture, print_edition.edit_id))
+    #print("Print edition: print number: {}, partiture: '{}', edition ID: {}".format(print_edition.id, print_edition.partiture, print_edition.edit_id))
 
 def process(entry, line_regex):
     key, val = line_regex.groups()
